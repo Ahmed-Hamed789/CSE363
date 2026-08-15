@@ -2,6 +2,12 @@
 
 Region: **us-east-1** (N. Virginia). All resources below were built or verified in this region.
 
+## Architecture diagram
+
+![System architecture: VPC with public/app/DB subnet tiers across two AZs, ALB, EC2 running the Nginx/Document/Quiz containers, RDS, three S3 buckets, SQS, SNS, and CloudFront](docs/architecture.png)
+
+Every arrow is labelled with its protocol and port, and marked **sync** (the caller blocks waiting for a response) or **async** (fire-and-forget, decoupled by SQS/SNS). Full-resolution vector source: [`docs/architecture.svg`](docs/architecture.svg).
+
 ## 1. Deviations from the spec (and why)
 
 | Spec value | Actual value | Reason |
@@ -30,9 +36,32 @@ This is demonstrated concretely in [evidence/rds-database-isolation-proof.txt](e
 
 ## 4. Built infrastructure summary
 
-**Networking** — `cse363-vpc` (`10.0.0.0/16`, DNS support + hostnames enabled), six subnets across `us-east-1a`/`us-east-1b` exactly per the spec's CIDR table, `cse363-igw` attached, three route tables (`cse363-public-rt` and `cse363-app-rt` → `0.0.0.0/0` via IGW; `cse363-db-rt` → local only), correct subnet associations. No NAT Gateway, no Transit Gateway, no VPN.
+**Networking** — `cse363-vpc` (`10.0.0.0/16`, DNS support + hostnames enabled), six subnets across `us-east-1a`/`us-east-1b`, `cse363-igw` attached, three route tables, correct subnet associations. No NAT Gateway, no Transit Gateway, no VPN — per the spec's own cost guidance, a NAT Gateway is explicitly not required, so the app tier reaches the internet (for `docker pull`, S3, SQS/SNS, SSM) via a direct IGW route on `cse363-app-rt` instead. The real isolation boundary is the DB tier, which has no internet route at all, plus the security-group chain below — not the app subnet's route table.
 
-**Security groups** — `CSE363-ALB-SG` (in: 80 from `0.0.0.0/0`; out: 80 to App-SG) → `CSE363-App-SG` (in: 80 from ALB-SG, 22 from operator IP only; out: all) → `CSE363-DB-SG` (in: 5432 from App-SG; out: all). Chain verified via `describe-security-groups`.
+**Subnet allocation table**
+
+| Subnet | AZ | CIDR | Tier | Internet route |
+|---|---|---|---|---|
+| `cse363-public-a` | us-east-1a | `10.0.1.0/24` | Public | `0.0.0.0/0` → IGW |
+| `cse363-public-b` | us-east-1b | `10.0.2.0/24` | Public | `0.0.0.0/0` → IGW |
+| `cse363-app-a` | us-east-1a | `10.0.11.0/24` | App | `0.0.0.0/0` → IGW |
+| `cse363-app-b` | us-east-1b | `10.0.12.0/24` | App | `0.0.0.0/0` → IGW |
+| `cse363-db-a` | us-east-1a | `10.0.21.0/24` | DB | None — local (`10.0.0.0/16`) only |
+| `cse363-db-b` | us-east-1b | `10.0.22.0/24` | DB | None — local (`10.0.0.0/16`) only |
+
+**Security groups** — `CSE363-ALB-SG` → `CSE363-App-SG` → `CSE363-DB-SG`, chained so no tier accepts a raw CIDR rule from anything but the tier in front of it. Verified live via `describe-security-groups`, including egress (not just inbound).
+
+**Security group table**
+
+| Security group | Direction | Port | Protocol | Source / destination |
+|---|---|---|---|---|
+| `CSE363-ALB-SG` | Inbound | 80 | TCP | `0.0.0.0/0` |
+| `CSE363-ALB-SG` | Outbound | 80 | TCP | `CSE363-App-SG` |
+| `CSE363-App-SG` | Inbound | 80 | TCP | `CSE363-ALB-SG` |
+| `CSE363-App-SG` | Inbound | 22 | TCP | `154.180.239.247/32` (operator IP only) |
+| `CSE363-App-SG` | Outbound | All | All | `0.0.0.0/0` |
+| `CSE363-DB-SG` | Inbound | 5432 | TCP | `CSE363-App-SG` |
+| `CSE363-DB-SG` | Outbound | All | All | `0.0.0.0/0` |
 
 **IAM** — `CSE363-EC2-Role` with instance profile, trust policy scoped to `ec2.amazonaws.com`, two inline policies (`DocumentServiceS3Policy`, `QuizServiceS3Policy`) each scoped to one bucket, plus AWS-managed `AmazonSSMManagedInstanceCore` (added so this session could run remote commands via SSM instead of opening broader SSH access — a stronger security posture than routing everything through port 22). No broad policies (`AdministratorAccess`, `S3FullAccess`, etc.) attached.
 
