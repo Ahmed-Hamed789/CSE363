@@ -1,0 +1,41 @@
+{
+  "CallerReference": "cse363-api-cdn-2026",
+  "Comment": "HTTPS front door for the cse363-alb API (fixes mixed-content blocking from the HTTPS frontend)",
+  "Enabled": true,
+  "PriceClass": "PriceClass_100",
+  "Origins": {
+    "Quantity": 1,
+    "Items": [
+      {
+        "Id": "cse363-alb-origin",
+        "DomainName": "cse363-alb-614549833.us-east-1.elb.amazonaws.com",
+        "CustomOriginConfig": {
+          "HTTPPort": 80,
+          "HTTPSPort": 443,
+          "OriginProtocolPolicy": "http-only",
+          "OriginSslProtocols": {
+            "Quantity": 1,
+            "Items": ["TLSv1.2"]
+          },
+          "OriginReadTimeout": 30,
+          "OriginKeepaliveTimeout": 5
+        }
+      }
+    ]
+  },
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "cse363-alb-origin",
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "AllowedMethods": {
+      "Quantity": 7,
+      "Items": ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"],
+      "CachedMethods": {
+        "Quantity": 2,
+        "Items": ["GET", "HEAD"]
+      }
+    },
+    "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+    "OriginRequestPolicyId": "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+    "Compress": true
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RdsBuild",
+      "Effect": "Allow",
+      "Action": [
+        "rds:CreateDBSubnetGroup",
+        "rds:DescribeDBSubnetGroups",
+        "rds:CreateDBInstance",
+        "rds:DeleteDBInstance",
+        "rds:ModifyDBInstance",
+        "rds:DescribeDBInstances",
+        "rds:DescribeDBEngineVersions",
+        "rds:DescribeOrderableDBInstanceOptions",
+        "rds:AddTagsToResource",
+        "rds:ListTagsForResource"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "IamRoleForEc2Only",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:GetRole",
+        "iam:PutRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:TagRole",
+        "iam:CreateInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:ListInstanceProfilesForRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::339879234587:role/CSE363-EC2-Role",
+        "arn:aws:iam::339879234587:instance-profile/CSE363-EC2-Role"
+      ]
+    },
+    {
+      "Sid": "IamAttachSsmManagedPolicy",
+      "Effect": "Allow",
+      "Action": "iam:AttachRolePolicy",
+      "Resource": "arn:aws:iam::339879234587:role/CSE363-EC2-Role",
+      "Condition": {
+        "ArnEquals": {
+          "iam:PolicyARN": "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        }
+      }
+    },
+    {
+      "Sid": "PassEc2RoleToEc2Only",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::339879234587:role/CSE363-EC2-Role",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ec2.amazonaws.com"
+        }
+      }
+    }
+  ]
+}

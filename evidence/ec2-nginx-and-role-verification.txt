@@ -1,0 +1,33 @@
+=== curl -i http://localhost/ ===
+HTTP/1.1 200 OK
+Server: nginx/1.30.3
+Content-Type: text/html
+ETag: "6a7115d2-3c4"
+(CSE363 Learning Platform placeholder HTML body returned)
+
+=== curl -i http://localhost/health ===
+HTTP/1.1 200 OK
+Content-Type: application/octet-stream
+Content-Length: 3
+
+OK
+
+=== aws sts get-caller-identity (run ON the EC2 instance) ===
+{
+    "UserId": "AROAU6ITBRQNUMEZ5HHCG:i-00563b8d3747b28fc",
+    "Account": "339879234587",
+    "Arn": "arn:aws:sts::339879234587:assumed-role/CSE363-EC2-Role/i-00563b8d3747b28fc"
+}
+
+Confirms the instance is using temporary credentials from CSE363-EC2-Role via its
+instance profile, not hardcoded access keys. Matches Milestone 1 IAM evidence requirement.
+
+Captured via SSM Run Command (AWS-RunShellScript) on i-00563b8d3747b28fc, 2026-08-03.
+
+=== ALB DNS reachability (from external client) ===
+DNS: cse363-alb-614549833.us-east-1.elb.amazonaws.com
+curl http://<ALB-DNS>/health -> HTTP/1.1 200 OK, body "OK"
+curl http://<ALB-DNS>/       -> HTTP 200
+
+Confirms internet -> ALB (CSE363-ALB-SG) -> Target Group -> EC2 (CSE363-App-SG) chain
+is fully working end to end. Target health: healthy.

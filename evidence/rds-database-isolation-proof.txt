@@ -1,0 +1,38 @@
+CSE363 Milestone 1 - RDS database/user creation and isolation proof
+Captured via AWS SSM Run Command on i-00563b8d3747b28fc against cse363-postgres
+(cse363-postgres.c8v6yk04a7xf.us-east-1.rds.amazonaws.com:5432, PostgreSQL 18.3)
+
+=== Databases (\l equivalent) ===
+  Name   |    Owner
+---------+-------------
+ docs_db | cse363admin
+ quiz_db | cse363admin
+(2 rows)
+
+=== Users (\du equivalent) ===
+ Role name | Can login
+-----------+-----------
+ docs_user | t
+ quiz_user | t
+(2 rows)
+
+=== docs_user -> docs_db (expected: success) ===
+ current_database | current_user
+------------------+--------------
+ docs_db          | docs_user
+(1 row)
+
+=== quiz_user -> docs_db (expected: permission denied) ===
+psql: error: connection to server at "cse363-postgres.c8v6yk04a7xf.us-east-1.rds.amazonaws.com" (10.0.21.32), port 5432 failed: FATAL:  permission denied for database "docs_db"
+DETAIL:  User does not have CONNECT privilege.
+
+=== quiz_user -> quiz_db (expected: success, sanity check) ===
+ current_database | current_user
+------------------+--------------
+ quiz_db          | quiz_user
+(1 row)
+
+Result: Quiz Service user (quiz_user) is confirmed unable to access the Document
+Service database (docs_db). Each service user can connect only to its own database.
+Public database access was revoked (REVOKE ALL ... FROM PUBLIC) and access was
+granted explicitly and exclusively to each service's own user.

@@ -1,0 +1,23 @@
+services:
+  document-service:
+    build: ./document-service
+    env_file: .env
+    restart: unless-stopped
+    expose:
+      - "5001"
+
+  quiz-service:
+    build: ./quiz-service
+    env_file: .env
+    restart: unless-stopped
+    expose:
+      - "5002"
+
+  gateway:
+    build: ./gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - document-service
+      - quiz-service

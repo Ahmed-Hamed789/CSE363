@@ -1,0 +1,17 @@
+{
+  "Sid": "OneTimeServiceLinkedRoles",
+  "Effect": "Allow",
+  "Action": "iam:CreateServiceLinkedRole",
+  "Resource": [
+    "arn:aws:iam::339879234587:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS",
+    "arn:aws:iam::339879234587:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing"
+  ],
+  "Condition": {
+    "StringEquals": {
+      "iam:AWSServiceName": [
+        "rds.amazonaws.com",
+        "elasticloadbalancing.amazonaws.com"
+      ]
+    }
+  }
+}

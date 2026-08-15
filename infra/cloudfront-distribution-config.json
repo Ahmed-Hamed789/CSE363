@@ -1,0 +1,40 @@
+{
+  "CallerReference": "cse363-frontend-cdn-2026",
+  "Comment": "CSE363 frontend HTTPS CDN in front of cse363-frontend S3 website endpoint",
+  "Enabled": true,
+  "PriceClass": "PriceClass_100",
+  "Origins": {
+    "Quantity": 1,
+    "Items": [
+      {
+        "Id": "cse363-frontend-s3-website",
+        "DomainName": "cse363-frontend.s3-website-us-east-1.amazonaws.com",
+        "CustomOriginConfig": {
+          "HTTPPort": 80,
+          "HTTPSPort": 443,
+          "OriginProtocolPolicy": "http-only",
+          "OriginSslProtocols": {
+            "Quantity": 1,
+            "Items": ["TLSv1.2"]
+          },
+          "OriginReadTimeout": 30,
+          "OriginKeepaliveTimeout": 5
+        }
+      }
+    ]
+  },
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "cse363-frontend-s3-website",
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "AllowedMethods": {
+      "Quantity": 2,
+      "Items": ["GET", "HEAD"],
+      "CachedMethods": {
+        "Quantity": 2,
+        "Items": ["GET", "HEAD"]
+      }
+    },
+    "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+    "Compress": true
+  }
+}

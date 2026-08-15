@@ -1,0 +1,262 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Ec2ReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:Describe*",
+        "ec2:Get*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "Ec2NetworkingBuild",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateVpc",
+        "ec2:ModifyVpcAttribute",
+        "ec2:CreateSubnet",
+        "ec2:ModifySubnetAttribute",
+        "ec2:CreateInternetGateway",
+        "ec2:AttachInternetGateway",
+        "ec2:CreateRouteTable",
+        "ec2:CreateRoute",
+        "ec2:AssociateRouteTable",
+        "ec2:CreateTags",
+        "ec2:DeleteTags"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "Ec2SecurityGroups",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupEgress"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "Ec2InstanceAndKeyPair",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances",
+        "ec2:TerminateInstances",
+        "ec2:CreateKeyPair",
+        "ec2:ImportKeyPair",
+        "ec2:DeleteKeyPair",
+        "ec2:ModifyInstanceMetadataOptions",
+        "ec2:AssociateIamInstanceProfile",
+        "ec2:GetConsoleOutput"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "ElasticLoadBalancing",
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:CreateLoadBalancer",
+        "elasticloadbalancing:CreateTargetGroup",
+        "elasticloadbalancing:CreateListener",
+        "elasticloadbalancing:RegisterTargets",
+        "elasticloadbalancing:DeregisterTargets",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:DescribeTargetGroups",
+        "elasticloadbalancing:DescribeTargetHealth",
+        "elasticloadbalancing:DescribeListeners",
+        "elasticloadbalancing:DescribeTags",
+        "elasticloadbalancing:ModifyLoadBalancerAttributes",
+        "elasticloadbalancing:ModifyTargetGroupAttributes",
+        "elasticloadbalancing:AddTags",
+        "elasticloadbalancing:SetSecurityGroups",
+        "elasticloadbalancing:SetSubnets"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "RdsBuild",
+      "Effect": "Allow",
+      "Action": [
+        "rds:CreateDBSubnetGroup",
+        "rds:DescribeDBSubnetGroups",
+        "rds:CreateDBInstance",
+        "rds:DeleteDBInstance",
+        "rds:ModifyDBInstance",
+        "rds:DescribeDBInstances",
+        "rds:DescribeDBEngineVersions",
+        "rds:DescribeOrderableDBInstanceOptions",
+        "rds:AddTagsToResource",
+        "rds:ListTagsForResource"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "IamRoleForEc2Only",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:GetRole",
+        "iam:PutRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:TagRole",
+        "iam:CreateInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:ListInstanceProfilesForRole",
+        "iam:DeleteRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::339879234587:role/CSE363-EC2-Role",
+        "arn:aws:iam::339879234587:instance-profile/CSE363-EC2-Role"
+      ]
+    },
+    {
+      "Sid": "IamAttachSsmManagedPolicy",
+      "Effect": "Allow",
+      "Action": "iam:AttachRolePolicy",
+      "Resource": "arn:aws:iam::339879234587:role/CSE363-EC2-Role",
+      "Condition": {
+        "ArnEquals": {
+          "iam:PolicyARN": "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        }
+      }
+    },
+    {
+      "Sid": "PassEc2RoleToEc2Only",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::339879234587:role/CSE363-EC2-Role",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ec2.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "SsmRunCommandOnInstance",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:SendCommand",
+        "ssm:GetCommandInvocation",
+        "ssm:ListCommandInvocations",
+        "ssm:ListCommands",
+        "ssm:DescribeInstanceInformation"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "S3ReadOnlyForVerification",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketLocation",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketVersioning",
+        "s3:GetBucketPublicAccessBlock"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "OneTimeServiceLinkedRoles",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": [
+        "arn:aws:iam::339879234587:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS",
+        "arn:aws:iam::339879234587:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": [
+            "rds.amazonaws.com",
+            "elasticloadbalancing.amazonaws.com"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "SqsSnsBuild",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:CreateQueue",
+        "sqs:GetQueueUrl",
+        "sqs:GetQueueAttributes",
+        "sqs:SetQueueAttributes",
+        "sqs:TagQueue",
+        "sqs:ListQueues",
+        "sns:CreateTopic",
+        "sns:GetTopicAttributes",
+        "sns:SetTopicAttributes",
+        "sns:Subscribe",
+        "sns:ListSubscriptionsByTopic",
+        "sns:TagResource"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "FrontendBucketDeploy",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::cse363-frontend",
+        "arn:aws:s3:::cse363-frontend/*"
+      ]
+    },
+    {
+      "Sid": "CloudFrontFrontendCdn",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:CreateDistribution",
+        "cloudfront:GetDistribution",
+        "cloudfront:UpdateDistribution",
+        "cloudfront:ListDistributions",
+        "cloudfront:TagResource",
+        "cloudfront:CreateInvalidation"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSE363 Learning Platform</title>
+<style>
+  :root{ color-scheme: dark; }
+  body{
+    margin:0; min-height:100vh; font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    background:#0f172a; color:#e2e8f0;
+  }
+  main{ max-width:720px; margin:0 auto; padding:40px 20px 80px; }
+  h1{ font-size:22px; margin:0 0 4px; }
+  .sub{ color:#94a3b8; font-size:14px; margin:0 0 32px; }
+  section{ background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px 22px; margin-bottom:20px; }
+  h2{ font-size:15px; margin:0 0 14px; color:#38bdf8; }
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  input[type=file]{ color:#e2e8f0; }
+  button{
+    background:#38bdf8; color:#04121f; border:none; border-radius:7px; padding:9px 16px;
+    font-weight:600; cursor:pointer; font-size:13.5px;
+  }
+  button:disabled{ opacity:.5; cursor:default; }
+  button.secondary{ background:transparent; border:1px solid #475569; color:#e2e8f0; }
+  .msg{ font-size:13px; margin-top:10px; color:#94a3b8; }
+  .msg.err{ color:#f87171; }
+  .msg.ok{ color:#4ade80; }
+  ul{ list-style:none; margin:0; padding:0; }
+  li{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:10px 0; border-bottom:1px solid #334155; font-size:13.5px;
+  }
+  li:last-child{ border-bottom:none; }
+  .status{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; padding:2px 8px; border-radius:20px; }
+  .status.queued{ background:#1e3a5f; color:#7dd3fc; }
+  .status.queued_empty_text{ background:#4a2e1e; color:#fbbf24; }
+  .quiz-q{ margin-bottom:16px; }
+  .quiz-q .qtext{ font-size:14px; margin-bottom:8px; }
+  .quiz-q label{ display:block; font-size:13px; padding:6px 0; cursor:pointer; }
+  .score{ font-size:20px; font-weight:700; color:#4ade80; }
+  #empty{ color:#64748b; font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>CSE363 Cloud Learning Platform</h1>
+  <p class="sub">Upload a study document, wait for the quiz to generate, take it.</p>
+
+  <section>
+    <h2>Upload a document</h2>
+    <div class="row">
+      <input id="file" type="file" accept=".pdf,.txt">
+      <button id="uploadBtn">Upload</button>
+    </div>
+    <div id="uploadMsg" class="msg"></div>
+  </section>
+
+  <section>
+    <h2>Documents</h2>
+    <ul id="docList"><li id="empty">Nothing uploaded yet.</li></ul>
+    <div class="row" style="margin-top:14px;">
+      <button class="secondary" id="refreshBtn">Refresh</button>
+    </div>
+  </section>
+
+  <section id="quizSection" style="display:none;">
+    <h2 id="quizTitle">Quiz</h2>
+    <div id="quizBody"></div>
+  </section>
+</main>
+
+<script>
+  // HTTPS front door for the ALB (CloudFront distribution E2I6O68M6XKECA).
+  // Must be HTTPS: this page is itself served over HTTPS, and browsers
+  // block "mixed content" fetches from an HTTPS page to a plain-HTTP API.
+  const API_BASE = "https://d3fbanu3k36721.cloudfront.net";
+
+  const $ = (id) => document.getElementById(id);
+
+  async function upload() {
+    const input = $("file");
+    const msg = $("uploadMsg");
+    if (!input.files.length) {
+      msg.textContent = "Choose a file first.";
+      msg.className = "msg err";
+      return;
+    }
+    const fd = new FormData();
+    fd.append("file", input.files[0]);
+    msg.textContent = "Uploading…";
+    msg.className = "msg";
+    try {
+      const res = await fetch(`${API_BASE}/api/documents/upload`, { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      msg.textContent = `Queued as ${data.document_id} (${data.status}). Quiz generates in the background.`;
+      msg.className = "msg ok";
+      input.value = "";
+      loadDocuments();
+    } catch (e) {
+      msg.textContent = `Upload failed: ${e.message}`;
+      msg.className = "msg err";
+    }
+  }
+
+  async function loadDocuments() {
+    const list = $("docList");
+    try {
+      const res = await fetch(`${API_BASE}/api/documents`);
+      const docs = await res.json();
+      if (!docs.length) {
+        list.innerHTML = `<li id="empty">Nothing uploaded yet.</li>`;
+        return;
+      }
+      list.innerHTML = docs.map((d) => `
+        <li>
+          <span>${d.filename}</span>
+          <span class="row">
+            <span class="status ${d.status}">${d.status}</span>
+            <button class="secondary" onclick="openQuiz('${d.id}')">Quiz</button>
+          </span>
+        </li>
+      `).join("");
+    } catch (e) {
+      list.innerHTML = `<li id="empty">Could not load documents: ${e.message}</li>`;
+    }
+  }
+
+  async function openQuiz(documentId) {
+    const section = $("quizSection");
+    const body = $("quizBody");
+    section.style.display = "block";
+    $("quizTitle").textContent = "Quiz";
+    body.innerHTML = "Loading…";
+    section.scrollIntoView({ behavior: "smooth" });
+
+    const res = await fetch(`${API_BASE}/api/quiz/${documentId}`);
+    const quiz = await res.json();
+
+    if (quiz.status === "pending") {
+      body.innerHTML = `<p class="msg">Quiz isn't ready yet — the worker hasn't picked it up. Try again in a few seconds.</p>`;
+      return;
+    }
+    if (!quiz.questions || !quiz.questions.length) {
+      body.innerHTML = `<p class="msg">No questions could be generated from this document's text.</p>`;
+      return;
+    }
+
+    body.innerHTML = quiz.questions.map((q, i) => `
+      <div class="quiz-q">
+        <div class="qtext">${i + 1}. ${q.question}</div>
+        ${q.options.map((opt, j) => `
+          <label><input type="radio" name="q${i}" value="${j}"> ${opt}</label>
+        `).join("")}
+      </div>
+    `).join("") + `<button id="submitBtn">Submit answers</button><div id="scoreMsg" class="msg"></div>`;
+
+    $("submitBtn").onclick = () => submitQuiz(documentId, quiz.questions.length);
+  }
+
+  async function submitQuiz(documentId, questionCount) {
+    const answers = [];
+    for (let i = 0; i < questionCount; i++) {
+      const picked = document.querySelector(`input[name="q${i}"]:checked`);
+      answers.push(picked ? Number(picked.value) : -1);
+    }
+    const res = await fetch(`${API_BASE}/api/quiz/${documentId}/submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answers }),
+    });
+    const data = await res.json();
+    $("scoreMsg").innerHTML = res.ok
+      ? `<span class="score">${data.correct_count} / ${data.total_count}</span> correct`
+      : `Error: ${data.error}`;
+  }
+
+  $("uploadBtn").onclick = upload;
+  $("refreshBtn").onclick = loadDocuments;
+  window.openQuiz = openQuiz;
+
+  loadDocuments();
+</script>
+</body>
+</html>

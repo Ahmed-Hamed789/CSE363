@@ -1,0 +1,34 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SsmRunCommandOnInstance",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:SendCommand",
+        "ssm:GetCommandInvocation",
+        "ssm:ListCommandInvocations",
+        "ssm:ListCommands",
+        "ssm:DescribeInstanceInformation"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "S3ReadOnlyForVerification",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketLocation",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketVersioning",
+        "s3:GetBucketPublicAccessBlock"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
